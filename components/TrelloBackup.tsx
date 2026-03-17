@@ -27,12 +27,43 @@ interface SearchResult {
   listName: string
 }
 
+const LABEL_COLORS: Record<string, string> = {
+  green: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+  yellow: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300',
+  orange: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300',
+  red: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+  purple: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
+  blue: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
+  sky: 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300',
+  lime: 'bg-lime-100 text-lime-800 dark:bg-lime-900/40 dark:text-lime-300',
+  pink: 'bg-pink-100 text-pink-800 dark:bg-pink-900/40 dark:text-pink-300',
+  black: 'bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200',
+}
+
+function ClipboardIcon() {
+  return (
+    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+    </svg>
+  )
+}
+
+function CheckIcon() {
+  return (
+    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+    </svg>
+  )
+}
+
 export default function TrelloBackup() {
   const [downloading, setDownloading] = useState(false)
   const [downloadError, setDownloadError] = useState<string | null>(null)
   const [board, setBoard] = useState<TrelloBoard | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+  const [copiedId, setCopiedId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // --- Download ---
@@ -69,6 +100,7 @@ export default function TrelloBackup() {
     setUploadError(null)
     setBoard(null)
     setSearchQuery('')
+    setExpandedRows(new Set())
 
     const reader = new FileReader()
     reader.onload = (ev) => {
@@ -84,6 +116,25 @@ export default function TrelloBackup() {
       }
     }
     reader.readAsText(file)
+  }
+
+  function toggleRow(id: string) {
+    setExpandedRows((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  function copyText(id: string, text: string) {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedId(id)
+      setTimeout(() => setCopiedId((cur) => (cur === id ? null : cur)), 1500)
+    })
   }
 
   function getSearchResults(): SearchResult[] {
@@ -109,19 +160,6 @@ export default function TrelloBackup() {
   }
 
   const searchResults = getSearchResults()
-
-  const LABEL_COLORS: Record<string, string> = {
-    green: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
-    yellow: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300',
-    orange: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300',
-    red: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
-    purple: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
-    blue: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
-    sky: 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300',
-    lime: 'bg-lime-100 text-lime-800 dark:bg-lime-900/40 dark:text-lime-300',
-    pink: 'bg-pink-100 text-pink-800 dark:bg-pink-900/40 dark:text-pink-300',
-    black: 'bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200',
-  }
 
   return (
     <div className="space-y-8">
@@ -217,6 +255,7 @@ export default function TrelloBackup() {
                 <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700/60 text-sm">
                   <thead className="bg-slate-50 dark:bg-slate-800/50">
                     <tr>
+                      <th className="w-8 px-2 py-3" />
                       <th className="px-4 py-3 text-left font-semibold text-slate-600 dark:text-slate-400">Card Name</th>
                       <th className="px-4 py-3 text-left font-semibold text-slate-600 dark:text-slate-400 w-44">List</th>
                       <th className="px-4 py-3 text-left font-semibold text-slate-600 dark:text-slate-400 w-44">Labels</th>
@@ -224,27 +263,81 @@ export default function TrelloBackup() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
-                    {searchResults.map(({ card, listName }) => (
-                      <tr key={card.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 align-top">
-                        <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{card.name}</td>
-                        <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{listName}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-wrap gap-1">
-                            {card.labels.filter((l) => l.name).map((label, i) => (
-                              <span
-                                key={i}
-                                className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${LABEL_COLORS[label.color] ?? 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'}`}
+                    {searchResults.map(({ card, listName }) => {
+                      const isExpanded = expandedRows.has(card.id)
+                      const isCopied = copiedId === card.id
+                      const isCopiedName = copiedId === card.id + '_name'
+                      return (
+                        <tr key={card.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 align-top">
+                          {/* Expand chevron */}
+                          <td className="px-2 py-3 text-center">
+                            <button
+                              onClick={() => toggleRow(card.id)}
+                              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                              title={isExpanded ? 'Collapse' : 'Expand'}
+                            >
+                              <svg
+                                className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={2}
                               >
-                                {label.name}
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                              </svg>
+                            </button>
+                          </td>
+
+                          {/* Card name + copy */}
+                          <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
+                            <div className="flex items-start gap-2">
+                              <span className="flex-1">{card.name}</span>
+                              <button
+                                onClick={() => copyText(card.id + '_name', card.name)}
+                                className="flex-shrink-0 mt-0.5 p-1 rounded text-slate-300 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                                title="Copy card name"
+                              >
+                                {isCopiedName ? <CheckIcon /> : <ClipboardIcon />}
+                              </button>
+                            </div>
+                          </td>
+
+                          <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{listName}</td>
+
+                          {/* Labels */}
+                          <td className="px-4 py-3">
+                            <div className="flex flex-wrap gap-1">
+                              {card.labels.filter((l) => l.name).map((label, i) => (
+                                <span
+                                  key={i}
+                                  className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${LABEL_COLORS[label.color] ?? 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'}`}
+                                >
+                                  {label.name}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+
+                          {/* Description + expand + copy */}
+                          <td className="px-4 py-3 text-slate-500 dark:text-slate-400 max-w-xs">
+                            <div className="flex items-start gap-2">
+                              <span className={`flex-1 ${isExpanded ? 'whitespace-pre-wrap' : 'line-clamp-2'}`}>
+                                {card.desc || <span className="text-slate-300 dark:text-slate-600 italic">No description</span>}
                               </span>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-slate-500 dark:text-slate-400 max-w-xs">
-                          <span className="line-clamp-2">{card.desc || '—'}</span>
-                        </td>
-                      </tr>
-                    ))}
+                              {card.desc && (
+                                <button
+                                  onClick={() => copyText(card.id, card.desc)}
+                                  className="flex-shrink-0 mt-0.5 p-1 rounded text-slate-300 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                                  title="Copy description"
+                                >
+                                  {isCopied ? <CheckIcon /> : <ClipboardIcon />}
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>

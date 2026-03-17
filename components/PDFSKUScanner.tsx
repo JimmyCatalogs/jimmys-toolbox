@@ -1,60 +1,91 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { CLIENT_CONFIGS, ClientKey, SkuResult } from '@/lib/sku-extractor'
+import { useState, useRef, useEffect } from 'react'
+import { CLIENT_CONFIGS, ClientKey, SkuResult, extractSkus } from '@/lib/sku-extractor'
+
+// Initialise the pdfjs worker once (client-side only)
+let pdfjsInitialised = false
+
+async function getPdfjsLib() {
+  const pdfjsLib = await import('pdfjs-dist')
+  if (!pdfjsInitialised) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+      'pdfjs-dist/build/pdf.worker.min.mjs',
+      import.meta.url
+    ).toString()
+    pdfjsInitialised = true
+  }
+  return pdfjsLib
+}
+
+async function extractTextFromPDF(file: File): Promise<string> {
+  const pdfjsLib = await getPdfjsLib()
+  const arrayBuffer = await file.arrayBuffer()
+  const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) })
+  const pdfDoc = await loadingTask.promise
+
+  const pageTexts: string[] = []
+  for (let i = 1; i <= pdfDoc.numPages; i++) {
+    const page = await pdfDoc.getPage(i)
+    const content = await page.getTextContent()
+    const pageText = content.items
+      .map((item) => ('str' in item ? item.str : ''))
+      .join(' ')
+    pageTexts.push(pageText)
+  }
+
+  return pageTexts.join('\n')
+}
 
 export default function PDFSKUScanner() {
   const [client, setClient] = useState<ClientKey>('herrschners')
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
+  const [progress, setProgress] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [results, setResults] = useState<{ skus: SkuResult[]; pdfName: string; totalPages: number } | null>(null)
+  const [results, setResults] = useState<{ skus: SkuResult[]; pdfName: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Warm up pdfjs on mount so first scan is faster
+  useEffect(() => {
+    getPdfjsLib().catch(() => {/* ignore preload errors */})
+  }, [])
 
   async function handleScan() {
     if (!file) return
     setLoading(true)
     setError(null)
     setResults(null)
+    setProgress('Loading PDF…')
 
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('client', client)
+      setProgress('Extracting text from pages…')
+      const fullText = await extractTextFromPDF(file)
 
-      const res = await fetch('/api/tools/pdf-sku-scanner', { method: 'POST', body: formData })
-      const data = await res.json()
+      setProgress('Scanning for SKUs…')
+      const skus = extractSkus(fullText, client)
 
-      if (!res.ok) {
-        setError(data.error ?? 'Unknown error')
-      } else {
-        setResults(data)
-      }
-    } catch {
-      setError('Request failed — check your connection and try again.')
+      setResults({ skus, pdfName: file.name })
+    } catch (err) {
+      console.error('PDF scan error:', err)
+      setError('Failed to process PDF. Make sure the file is a valid, readable PDF.')
     } finally {
       setLoading(false)
+      setProgress(null)
     }
   }
 
   function handleDownloadExcel() {
     if (!results) return
-
-    // Dynamically import xlsx to keep it out of the server bundle
     import('xlsx').then((XLSX) => {
       const worksheetData = [
         ['SKU', 'Search SKU', 'Search URL'],
         ...results.skus.map((r) => [r.sku, r.searchSku, r.searchUrl]),
       ]
-
       const workbook = XLSX.utils.book_new()
       const worksheet = XLSX.utils.aoa_to_sheet(worksheetData)
-
-      // Column widths
       worksheet['!cols'] = [{ wch: 15 }, { wch: 15 }, { wch: 70 }]
-
       XLSX.utils.book_append_sheet(workbook, worksheet, 'SKUs')
-
       const baseName = results.pdfName.replace(/\.pdf$/i, '')
       XLSX.writeFile(workbook, `${baseName}-SKUs.xlsx`)
     })
@@ -114,6 +145,17 @@ export default function PDFSKUScanner() {
         </button>
       </div>
 
+      {/* Progress */}
+      {loading && progress && (
+        <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+          <svg className="w-4 h-4 animate-spin text-indigo-500" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+          </svg>
+          {progress}
+        </div>
+      )}
+
       {/* Error */}
       {error && (
         <div className="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/60 px-4 py-3 text-sm text-red-700 dark:text-red-400">
@@ -128,7 +170,6 @@ export default function PDFSKUScanner() {
             <div className="text-sm text-slate-600 dark:text-slate-400">
               Found <span className="font-semibold text-slate-900 dark:text-slate-100">{results.skus.length}</span> unique SKUs
               in <span className="font-medium">{results.pdfName}</span>
-              <span className="ml-1 text-slate-400">({results.totalPages} pages)</span>
             </div>
             <div className="flex gap-2">
               <button
@@ -159,7 +200,7 @@ export default function PDFSKUScanner() {
               <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700/60 text-sm">
                 <thead className="bg-slate-50 dark:bg-slate-800/50">
                   <tr>
-                    <th className="px-4 py-3 text-left font-semibold text-slate-600 dark:text-slate-400 w-32">#</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-600 dark:text-slate-400 w-12">#</th>
                     <th className="px-4 py-3 text-left font-semibold text-slate-600 dark:text-slate-400 w-36">SKU</th>
                     <th className="px-4 py-3 text-left font-semibold text-slate-600 dark:text-slate-400 w-36">Search SKU</th>
                     <th className="px-4 py-3 text-left font-semibold text-slate-600 dark:text-slate-400">Search URL</th>
