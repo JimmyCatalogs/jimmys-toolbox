@@ -12,7 +12,7 @@ const sections = [
     title: 'EZ-Advisors',
     href: '/ez-advisors',
     description: 'Tools for EZ-Advisors operations including board management, backups, and internal workflows.',
-    tools: ['Trello Backup'],
+    tools: ['Trello Backup Search'],
     color: 'violet',
   },
 ]

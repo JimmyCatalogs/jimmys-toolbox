@@ -10,8 +10,8 @@ export default function EZAdvisorsPage() {
       </div>
 
       <ToolCard
-        title="Trello Backup"
-        description="Download the current Trello board as a JSON backup, or upload an existing backup to search through cards."
+        title="Trello Backup Search"
+        description="Upload a saved Trello board JSON backup and search through cards by name, description, list, or label."
         basecampUrl=""
       >
         <TrelloBackup />
