@@ -91,6 +91,22 @@ export default function PDFSKUScanner() {
     })
   }
 
+  function handleDownloadUrlsOnly() {
+    if (!results) return
+    import('xlsx').then((XLSX) => {
+      const worksheetData = [
+        ['Search URL'],
+        ...results.skus.map((r) => [r.searchUrl]),
+      ]
+      const workbook = XLSX.utils.book_new()
+      const worksheet = XLSX.utils.aoa_to_sheet(worksheetData)
+      worksheet['!cols'] = [{ wch: 70 }]
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'URLs')
+      const baseName = results.pdfName.replace(/\.pdf$/i, '')
+      XLSX.writeFile(workbook, `${baseName}-URLs.xlsx`)
+    })
+  }
+
   function handleReset() {
     setFile(null)
     setResults(null)
@@ -181,6 +197,16 @@ export default function PDFSKUScanner() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
                 </svg>
                 Download Excel
+              </button>
+              <button
+                onClick={handleDownloadUrlsOnly}
+                disabled={results.skus.length === 0}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-700/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg>
+                URLs Only
               </button>
               <button
                 onClick={handleReset}
