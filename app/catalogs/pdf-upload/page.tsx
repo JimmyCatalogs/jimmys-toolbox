@@ -1,8 +1,8 @@
 import Link from 'next/link'
 import ToolCard from '@/components/ToolCard'
-import WeeklyLeadsEmail from '@/components/WeeklyLeadsEmail'
+import CatalogPDFUpload from '@/components/CatalogPDFUpload'
 
-export default function WeeklyLeadsPage() {
+export default function PDFUploadPage() {
   return (
     <div>
       <Link
@@ -15,11 +15,11 @@ export default function WeeklyLeadsPage() {
         Back to Tools
       </Link>
       <ToolCard
-        title="Weekly Leads Email"
-        description="Send weekly lead count emails to all catalog partners via SendGrid."
+        title="PDF Upload"
+        description="Upload PDFs to S3 and copy their public URLs."
         basecampUrl=""
       >
-        <WeeklyLeadsEmail />
+        <CatalogPDFUpload />
       </ToolCard>
     </div>
   )
