@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { Suspense } from 'react'
+import TodaysHoliday from '@/components/TodaysHoliday'
 
 const sections = [
   {
@@ -41,12 +43,23 @@ export default function HomePage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <Suspense fallback={
+          <div className="sm:col-span-2 bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-700/60 rounded-xl shadow-sm p-6 animate-pulse">
+            <div className="h-4 w-32 bg-slate-200 dark:bg-slate-700 rounded mb-3" />
+            <div className="h-6 w-48 bg-slate-200 dark:bg-slate-700 rounded mb-2" />
+            <div className="h-4 w-full bg-slate-200 dark:bg-slate-700 rounded" />
+          </div>
+        }>
+          <div className="sm:col-span-2">
+            <TodaysHoliday />
+          </div>
+        </Suspense>
         {sections.map((section) => {
           const colors = colorMap[section.color]
           return (
             <div
               key={section.href}
-              className={`bg-white dark:bg-slate-900 border ${colors.card} rounded-xl shadow-sm p-6 flex flex-col gap-4`}
+              className={`bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border ${colors.card} rounded-xl shadow-sm p-6 flex flex-col gap-4`}
             >
               <div>
                 <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{section.title}</h3>

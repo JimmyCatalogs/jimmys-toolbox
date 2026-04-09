@@ -9,7 +9,7 @@ interface ToolCardProps {
 
 export default function ToolCard({ title, description, basecampUrl, children }: ToolCardProps) {
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-xl shadow-sm">
+    <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-slate-700/60 rounded-xl shadow-sm">
       <div className="flex items-start justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700/60">
         <div>
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
