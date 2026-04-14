@@ -7,9 +7,13 @@ export type HolidayEntry = {
 }
 
 export function getTodaysHoliday(): HolidayEntry | null {
-  const today = new Date()
-  const mm = String(today.getMonth() + 1).padStart(2, '0')
-  const dd = String(today.getDate()).padStart(2, '0')
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date())
+  const mm = parts.find(p => p.type === 'month')!.value
+  const dd = parts.find(p => p.type === 'day')!.value
   const key = `${mm}-${dd}` as keyof typeof holidays
   return (holidays[key] as HolidayEntry) ?? null
 }
