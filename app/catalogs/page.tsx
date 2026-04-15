@@ -21,6 +21,11 @@ const tools = [
     description: 'Upload PDFs to S3 and copy their public URLs.',
     href: '/catalogs/pdf-upload',
   },
+  {
+    label: 'Redeploy Website',
+    description: 'Trigger a new production build on Netlify for the Catalogs.com website.',
+    href: '/catalogs/redeploy',
+  },
 ]
 
 export default function CatalogsPage() {
