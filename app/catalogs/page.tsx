@@ -26,6 +26,11 @@ const tools = [
     description: 'Trigger a new production build on Netlify for the Catalogs.com website.',
     href: '/catalogs/redeploy',
   },
+  {
+    label: "Vesey's Image Converter",
+    description: "Convert thumbnail image URLs to full-size URLs in bulk using a simple find-and-replace on the URL pattern.",
+    href: '/catalogs/veseys-image-converter',
+  },
 ]
 
 export default function CatalogsPage() {
